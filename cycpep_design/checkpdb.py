@@ -1,24 +1,24 @@
 import os
 
 def check_subfolders_for_pdb_files(parent_folder):
-    # 遍历主文件夹中的每个子文件夹
+    # Iterate through each subfolder in the parent folder
     for subfolder in os.listdir(parent_folder):
         subfolder_path = os.path.join(parent_folder, subfolder)
         
-        # 确保它是一个文件夹
+        # Make sure it is a directory
         if os.path.isdir(subfolder_path):
             contains_unrelaxed_rank_file = False
             
-            # 检查该子文件夹中的所有文件
+            # Check all files in this subfolder
             for filename in os.listdir(subfolder_path):
                 if "unrelaxed_rank" in filename and filename.endswith(".pdb"):
                     contains_unrelaxed_rank_file = True
                     break
             
-            # 如果没有找到符合条件的文件，打印子文件夹名称
+            # If no matching file is found, print the subfolder name
             if not contains_unrelaxed_rank_file:
-                print(f"子文件夹 '{subfolder}' 中不包含 'unrelaxed_rank' 的 PDB 文件")
+                print(f"Subfolder '{subfolder}' does not contain an 'unrelaxed_rank' PDB file")
 
-# 示例用法
+# Example usage
 parent_folder_path = "/home/yons/lab/zch/rfd2HF/outputdir/1104_H_25T"
 check_subfolders_for_pdb_files(parent_folder_path)
