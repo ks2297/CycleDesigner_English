@@ -3,25 +3,25 @@
 #  run：./run_inference.sh input_pdb_file
 
 if [ "$#" -ne 1 ]; then
-    echo "用法：$0 input_pdb_file"
+    echo "Usage: $0 input_pdb_file"
     exit 1
 fi
 
 INPUT_PDB=$1
 
-# 提取链 ID
+# Extract chain IDs
 CHAIN_IDS=($(grep '^ATOM' $INPUT_PDB | awk '{print $5}' | sort | uniq))
 NUM_CHAINS=${#CHAIN_IDS[@]}
 
 if [ "$NUM_CHAINS" -ne 2 ]; then
-    echo "错误：PDB 文件必须包含两条链。"
+    echo "Error: PDB file must contain exactly two chains."
     exit 1
 fi
 
 CHAIN1=${CHAIN_IDS[0]}
 CHAIN2=${CHAIN_IDS[1]}
 
-# 获取链的长度和序列范围
+# Get chain length and residue range
 get_chain_info() {
     local pdb_file=$1
     local chain_id=$2
@@ -34,7 +34,7 @@ get_chain_info() {
 CHAIN1_RANGE=$(get_chain_info $INPUT_PDB $CHAIN1)
 CHAIN2_RANGE=$(get_chain_info $INPUT_PDB $CHAIN2)
 
-# 获取链长度
+# Get chain length
 get_chain_length() {
     local pdb_file=$1
     local chain_id=$2
@@ -45,7 +45,7 @@ get_chain_length() {
 LEN1=$(get_chain_length $INPUT_PDB $CHAIN1)
 LEN2=$(get_chain_length $INPUT_PDB $CHAIN2)
 
-# 确定较长和较短的链
+# Determine the longer and shorter chains
 LEN1=$(echo $CHAIN1_RANGE | awk -F'-' '{print $2-$1+1}')
 LEN2=$(echo $CHAIN2_RANGE | awk -F'-' '{print $2-$1+1}')
 
@@ -65,10 +65,10 @@ else
     PEP_LEN=$LEN1
 fi
 
-echo "较长的链：$LONG_CHAIN (范围 $LONG_CHAIN_RANGE)"
-echo "较短的链：$SHORT_CHAIN (范围 $SHORT_CHAIN_RANGE)"
+echo "Longer chain: $LONG_CHAIN (range $LONG_CHAIN_RANGE)"
+echo "Shorter chain: $SHORT_CHAIN (range $SHORT_CHAIN_RANGE)"
 
-# 提取靶点并保存为 xxxx_tar.pdb
+# Extract the target chain and save as xxxx_tar.pdb
 PDB_BASENAME=$(basename $INPUT_PDB .pdb)
 OUTPUT_PDB="/home/yons/inputs/hf_pre/single_tar/${PDB_BASENAME}_tar.pdb"
 
@@ -76,7 +76,7 @@ grep '^ATOM' $INPUT_PDB | awk -v chain=$LONG_CHAIN '$5 == chain' > $OUTPUT_PDB
 
 sleep 2
 
-# # 一对一hotspot
+# # One-to-one hotspot
 # cat > compute_contacts.py <<EOF
 # # compute_contacts.py
 # import sys
@@ -99,15 +99,15 @@ sleep 2
 #             atom1 = residue1['CA'].coord
 #             atom2 = residue2['CA'].coord
 #             distance = np.linalg.norm(atom1 - atom2)
-#             distances.append((distance, residue1.get_id()[1]))  # 记录距离和残基ID
+#             distances.append((distance, residue1.get_id()[1]))  # Record distance and residue ID
 #             if distance < threshold:
-#                 contact_residues.add(residue1.get_id()[1])  # 仅添加长链的氨基酸序号
+#                 contact_residues.add(residue1.get_id()[1])  # Only add residue numbers from the longer chain
 
-#         # 如果 contact_residues 中元素少于3个，按距离最小的排序，取前3个残基
+#         # If contact_residues has fewer than 3 elements, sort by shortest distance and take top 3 residues
 #     if len(contact_residues) < 3:
-#         sorted_distances = sorted(distances, key=lambda x: x[0])  # 按距离排序
-#         top3_residues = [res_id for _, res_id in sorted_distances[:3]]  # 取前3个res_id
-#         contact_residues.update(top3_residues)  # 更新 contact_residues
+#         sorted_distances = sorted(distances, key=lambda x: x[0])  # Sort by distance
+#         top3_residues = [res_id for _, res_id in sorted_distances[:3]]  # Take the top 3 res_ids
+#         contact_residues.update(top3_residues)  # Update contact_residues
 #     return contact_residues
 
 # if __name__ == "__main__":
@@ -123,10 +123,10 @@ sleep 2
 #     contact_residues = calc_distances(chain1, chain2, threshold)
     
 #     for res in contact_residues:
-#         print(f"{chain_id1}{res}")  # 输出格式为 A1
+#         print(f"{chain_id1}{res}")  # Output format: A1
 # EOF
 
-# 一对多hotspot
+# One-to-many hotspot
 cat > compute_contacts.py <<EOF
 import sys
 from Bio.PDBp import *
@@ -170,7 +170,7 @@ EOF
 
 CONTACT_RESIDUES=$(python compute_contacts.py $INPUT_PDB $LONG_CHAIN $SHORT_CHAIN 5.0)
 
-# 格式化 ppi.hotspot_res=[]
+# Format ppi.hotspot_res=[]
 HOTSPOT_RES="["
 FIRST=1
 for res in $CONTACT_RESIDUES; do
@@ -185,12 +185,12 @@ HOTSPOT_RES+="]"
 
 echo "ppi.hotspot_res=$HOTSPOT_RES"
 
-# 写入 contigmap.contigs，使用实际的残基编号范围
+# Write contigmap.contigs using actual residue number ranges
 CONTIGMAP_CONTIGS="[${LONG_CHAIN}${LONG_CHAIN_RANGE}/0 ${PEP_LEN}-${PEP_LEN}]"
 
 echo "contigmap.contigs=$CONTIGMAP_CONTIGS"
 
-# 运行脚本
+# Run the inference script
 INFERENCE_SCRIPT=./scripts/run_inference.py
 INFERENCE_MODEL_DIR=/home/yons/models
 INFERENCE_INPUT_PDB=$OUTPUT_PDB
@@ -199,6 +199,6 @@ INFERENCE_LOG=$PDB_BASENAME:_$(date +%Y%m%d).log
 
 CMD="$INFERENCE_SCRIPT 'contigmap.contigs=$CONTIGMAP_CONTIGS' 'ppi.hotspot_res=$HOTSPOT_RES' diffuser.T=25 inference.deterministic=True inference.num_designs=5 inference.model_directory_path=$INFERENCE_MODEL_DIR inference.input_pdb=$INFERENCE_INPUT_PDB inference.output_prefix=$INFERENCE_OUTPUT_PREFIX > $INFERENCE_LOG 2>&1"
 
-echo "运行命令："
+echo "Running command:"
 echo $CMD
 eval $CMD
