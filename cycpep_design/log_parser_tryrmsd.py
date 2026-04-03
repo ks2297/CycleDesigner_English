@@ -3,11 +3,11 @@ import re
 import json
 import numpy as np
 import pandas as pd
-from 计算基于位置对齐的CaRMSD import main
+from calc_position_aligned_CaRMSD import main  # Renamed from: 计算基于位置对齐的CaRMSD
 
 def extract_plddt_from_file(log_file, fasta_dir, native_dir):
     """
-    从指定的日志文件中提取 PLDDT 和 IPAE 相关信息。
+    Extract pLDDT and iPAE metrics from a specified log file.
     """
     path = os.path.dirname(log_file)
     metrics = []
@@ -16,12 +16,12 @@ def extract_plddt_from_file(log_file, fasta_dir, native_dir):
         lines = fr.readlines()
         for line in lines:
             items = line.strip().split(' ')
-            # 过滤满足 rank_00 开头的行
+            # Filter lines that start with rank_00
             if len(items) >= 3 and items[2].startswith('rank_00'):
-                # 初始化记录
+                # Initialize record
                 m = [path, items[2], -1, -1, -1]
                 
-                # 提取 plddt, ptm 和 iptm
+                # Extract plddt, ptm, and iptm
                 if len(items) >= 4:
                     m[2] = items[3].split('=')[1]
                 if len(items) >= 5:
@@ -29,14 +29,14 @@ def extract_plddt_from_file(log_file, fasta_dir, native_dir):
                 if len(items) >= 6:
                     m[4] = items[5].split('=')[1]
                 
-                # 解析路径信息生成 protein_id 和其他字段
+                # Parse path info to generate protein_id and other fields
                 protein_id = path.split('/')[-1].split('_')[0]
                 backbone = path.split('_')[1]
                 seqid = path.split('_')[2]
                 rank = items[2].split('_')[1][2]
                 model = items[2].split('_')[-3]
                 
-                # 添加 IPAE 信息提取
+                # Extract iPAE from the JSON scores file
                 json_file_path = f"{path}/{protein_id}_{backbone}_{seqid}_scores_rank_00{rank}_alphafold2_multimer_v3_model_{model}_seed_000.json"
                 fasta_file_path = f"{fasta_dir}/{protein_id}_{backbone}_{seqid}.fasta"
                 if os.path.exists(json_file_path):
@@ -55,7 +55,7 @@ def extract_plddt_from_file(log_file, fasta_dir, native_dir):
                                     # ipae = (np.mean(pae_matrix[:tar_len, tar_len:]) + np.mean(pae_matrix[tar_len:, :tar_len])) / 2
                                     m.append(ipae)
 
-                # 添加rmsd计算
+                # Calculate RMSD against the native structure
                 pdb_file_path = f"{path}/{protein_id}_{backbone}_{seqid}_unrelaxed_rank_00{rank}_alphafold2_multimer_v3_model_{model}_seed_000.pdb"
                 native_file_path = f"{native_dir}/{protein_id}_{backbone}.pdb"
                 if os.path.exists(pdb_file_path) and os.path.exists(native_file_path):
@@ -71,18 +71,18 @@ def extract_plddt_from_file(log_file, fasta_dir, native_dir):
                 #             pdb_file_path = os.path.join(root, pdb_file)
                 #             rank_number = extract_rank_number(pdb_file)
 
-                #             # 找到匹配的 native 文件
+                #             # Find the matching native file
                 #             native_file = find_native_file(native_dir, pdb_file)
                 #             if native_file:
                 #                 try:
-                #                     # 计算 RMSD
+                #                     # Calculate RMSD
                 #                     rmsd_value = main(pdb_file_path, native_file)
                 #                     m.append([rmsd_value])
                 #                 except Exception as e:
-                #                     print(f"计算 {pdb_file} 和 {native_file.name} 时出错: {e}")
+                #                     print(f"Error calculating RMSD for {pdb_file} and {native_file.name}: {e}")
 
                 
-                # 合并信息并添加到结果列表
+                # Merge info and add to the results list
                 m = [protein_id, backbone, seqid, rank] + m
                 metrics.append(m)
     
@@ -90,7 +90,7 @@ def extract_plddt_from_file(log_file, fasta_dir, native_dir):
 
 def extract_plddt_from_folder(folder, fasta_dir, native_dir):
     """
-    遍历指定文件夹中的所有日志文件，提取所有 PLDDT 和 IPAE 相关信息。
+    Walk through all log files in the specified folder and extract pLDDT and iPAE metrics.
     """
     metrics = []
     
@@ -104,7 +104,7 @@ def extract_plddt_from_folder(folder, fasta_dir, native_dir):
 
 def write_to_file(metrics, output_file):
     """
-    将提取的 PLDDT 和 IPAE 信息写入 CSV 文件。
+    Write the extracted pLDDT and iPAE metrics to a CSV file.
     """
     # Adjusted columns to match the structure of metrics
     df = pd.DataFrame(metrics, columns=[
@@ -113,4 +113,3 @@ def write_to_file(metrics, output_file):
     df.to_csv(output_file, index=False)
     print(f"Data written to {output_file}")
     return "done"
-
