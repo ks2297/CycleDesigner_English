@@ -5,13 +5,13 @@ def extract_tar_chain(input_pdb):
     parser = PDB.PDBParser(QUIET=True)
     structure = parser.get_structure("input_structure", input_pdb)
 
-    # 假设只有两条链，获取所有链
+    # Assume there are only two chains; get all chains
     chains = list(structure[0].get_chains())
 
     if len(chains) != 2:
         raise ValueError("The PDB file must contain exactly two chains.")
 
-    # 比较长度
+    # Compare chain lengths
     chain_1 = chains[0]
     chain_2 = chains[1]
 
@@ -22,12 +22,12 @@ def extract_tar_chain(input_pdb):
         longer_chain = chain_2
         shorter_chain = chain_1
 
-    # 靶点和肽长度，用于contigmap.contigs=...
+    # Target and peptide lengths, used for contigmap.contigs=...
     tar_len = len(longer_chain)
     pep_len = len(shorter_chain)
     print(f"Length of tar is {tar_len}, length of pep is {pep_len}")
 
-    # 新建pdb，添加长链
+    # Create a new PDB structure and add the longer chain
     new_structure = PDB.Structure.Structure("target_structure")
     new_model = PDB.Model.Model(0)
     new_model.add(longer_chain)
