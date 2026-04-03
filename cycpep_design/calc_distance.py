@@ -29,7 +29,7 @@ def calc_distances(chain1, chain2, threshold=5.0):
                 result.append((residue1.get_id()[1], residue2.get_id()[1], distance))
                 res_id = residue1.get_id()[1]
                 contact_residues.add(f"{residue1}{res_id}")
-                break  # 跳出 atom_short 循环
+                break  # Exit the atom_short loop
     
     return result, contact_residues
 
@@ -40,10 +40,8 @@ def main(input_pdb, chain_id1, chain_id2, threshold=5.0):
 
     distances, contact_residues = calc_distances(chain1, chain2, threshold)
 
-    # 打印出距离小于阈值的残基序号和对应的距离
+    # Print residue IDs and corresponding distances below the threshold
     for res1, res2, dist in distances:  # Unpacking the tuples correctly
         print(f"Chain {chain_id1} Residue {res1} - Chain {chain_id2} Residue {res2}: Distance = {dist:.2f} Å")
 
     print("Contact residues:", contact_residues)  # Optionally print contact residues
-
-
